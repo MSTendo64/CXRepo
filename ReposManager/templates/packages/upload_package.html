@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Загрузка пакета{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title mb-4">Загрузка нового пакета</h2>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="pkg_name" class="form-label">Название пакета</label>
+                        <input type="text" class="form-control" id="pkg_name" name="pkg_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pkg_version" class="form-label">Версия</label>
+                        <input type="text" class="form-control" id="pkg_version" name="pkg_version" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pkg_description" class="form-label">Описание</label>
+                        <textarea class="form-control" id="pkg_description" name="pkg_description" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pkg_file" class="form-label">Файл пакета</label>
+                        <input type="file" class="form-control" id="pkg_file" name="pkg_file" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Загрузить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

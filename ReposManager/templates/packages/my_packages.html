@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои пакеты - CXRepo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Мои пакеты</h2>
+    <a href="{% url 'upload-package' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Загрузить новый пакет
+    </a>
+</div>
+
+{% if packages %}
+    {% regroup packages by pkg_name as package_list %}
+    {% for package_group in package_list %}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="h5 mb-0">{{ package_group.grouper }}</h3>
+                <button class="btn btn-danger btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#deleteModal"
+                        data-package-name="{{ package_group.grouper }}">
+                    Удалить пакет
+                </button>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for version in package_group.list %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Версия {{ version.pkg_version }}</h6>
+                                <p class="mb-1 text-muted">{{ version.pkg_description|truncatechars:100 }}</p>
+                                <small class="text-muted">Опубликован: {{ version.pkg_publish_date }}</small>
+                                {% if version.admin_comment and version.verification_status == 'rejected' %}
+                                    <div class="alert alert-danger mt-2">
+                                        <strong>Комментарий администратора:</strong><br>
+                                        {{ version.admin_comment }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-column align-items-end">
+                                <span class="badge {% if version.verification_status == 'verified' %}bg-success{% elif version.verification_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %} mb-2">
+                                    {{ version.get_verification_status_display }}
+                                </span>
+                                <div class="btn-group">
+                                    <a href="{% url 'update-package' version.pkg_name %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        Изменить
+                                    </a>
+                                    {% if version.verification_status == 'verified' %}
+                                        <a href="{% url 'download-package' version.pkg_name version.pkg_version %}" 
+                                           class="btn btn-sm btn-success">
+                                            Скачать
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="alert alert-info">
+        У вас пока нет загруженных пакетов
+    </div>
+{% endif %}
+
+<!-- Modal для подтверждения удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Подтверждение удаления</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Для подтверждения удаления введите название пакета:</p>
+                <input type="text" class="form-control" id="confirmPackageName">
+                <div class="invalid-feedback">
+                    Название пакета не совпадает
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <form method="post" action="" id="deleteForm">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" disabled id="confirmDelete">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('deleteModal');
+    const confirmInput = document.getElementById('confirmPackageName');
+    const confirmButton = document.getElementById('confirmDelete');
+    const deleteForm = document.getElementById('deleteForm');
+    let packageToDelete = '';
+
+    deleteModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        packageToDelete = button.dataset.packageName;
+        confirmInput.value = '';
+        confirmButton.disabled = true;
+        deleteForm.action = `/package/${packageToDelete}/delete/`;
+    });
+
+    confirmInput.addEventListener('input', function() {
+        const isMatch = this.value === packageToDelete;
+        this.classList.toggle('is-invalid', !isMatch && this.value.length > 0);
+        confirmButton.disabled = !isMatch;
+    });
+});
+</script>
+{% endblock %} 

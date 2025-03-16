@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Пакеты - CXRepo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Пакеты</h2>
+        </div>
+        <div class="col-md-4">
+            <form method="get" class="d-flex">
+                <input type="text" name="search" class="form-control me-2" placeholder="Поиск пакетов..." value="{{ search_query }}">
+                <button type="submit" class="btn btn-primary">Поиск</button>
+            </form>
+        </div>
+    </div>
+
+    {% if packages %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for package in packages %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ package.pkg_name }}</h5>
+                                {% if is_staff %}
+                                    <span class="badge {% if package.verification_status == 'verified' %}bg-success{% elif package.verification_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ package.get_verification_status_display }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <h6 class="card-subtitle mb-2 text-muted">Версия {{ package.pkg_version }}</h6>
+                            <p class="card-text">{{ package.pkg_description|truncatechars:150 }}</p>
+                            <p class="text-muted small">Опубликован: {{ package.pkg_publish_date }}</p>
+                            {% if is_staff or package.verification_status == 'verified' %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'package-detail-view' package.pkg_name %}" class="btn btn-outline-primary btn-sm">Подробнее</a>
+                                    <a href="{% url 'download-package' package.pkg_name package.pkg_version %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-download"></i> Скачать
+                                    </a>
+                                </div>
+                            {% endif %}
+                            {% if is_staff and package.verification_status == 'pending' %}
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'verify-package' package.pkg_name package.pkg_version %}" class="d-flex gap-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status" value="verified">
+                                        <button type="submit" class="btn btn-success btn-sm flex-grow-1">Подтвердить</button>
+                                        <button type="button" class="btn btn-danger btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#rejectModal{{ package.id }}">
+                                            Отклонить
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if is_staff and package.verification_status == 'pending' %}
+                    <!-- Модальное окно для отклонения пакета -->
+                    <div class="modal fade" id="rejectModal{{ package.id }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Отклонить пакет {{ package.pkg_name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{% url 'verify-package' package.pkg_name package.pkg_version %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body">
+                                        <input type="hidden" name="status" value="rejected">
+                                        <div class="mb-3">
+                                            <label for="comment{{ package.id }}" class="form-label">Причина отклонения:</label>
+                                            <textarea class="form-control" id="comment{{ package.id }}" name="comment" rows="3" required></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                        <button type="submit" class="btn btn-danger">Отклонить</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            Пакеты не найдены
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

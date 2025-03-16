@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ package.pkg_name }} - CXRepo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h2 class="card-title mb-1">{{ package.pkg_name }}</h2>
+                    <h5 class="text-muted">Версия {{ package.pkg_version }}</h5>
+                </div>
+                {% if is_staff %}
+                    <span class="badge {% if package.verification_status == 'verified' %}bg-success{% elif package.verification_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %} fs-6">
+                        {{ package.get_verification_status_display }}
+                    </span>
+                {% endif %}
+            </div>
+
+            <p class="card-text">{{ package.pkg_description }}</p>
+            <p class="text-muted">Опубликован: {{ package.pkg_publish_date }}</p>
+
+            {% if package.admin_comment and package.verification_status == 'rejected' %}
+                <div class="alert alert-danger">
+                    <strong>Комментарий администратора:</strong><br>
+                    {{ package.admin_comment }}
+                </div>
+            {% endif %}
+
+            {% if is_staff or package.verification_status == 'verified' %}
+                <a href="{% url 'download-package' package.pkg_name package.pkg_version %}" class="btn btn-success">
+                    <i class="fas fa-download"></i> Скачать
+                </a>
+            {% endif %}
+
+            {% if is_staff and package.verification_status == 'pending' %}
+                <div class="mt-3">
+                    <form method="post" action="{% url 'verify-package' package.pkg_name package.pkg_version %}" class="d-inline-block">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="verified">
+                        <button type="submit" class="btn btn-success">Подтвердить</button>
+                    </form>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        Отклонить
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if other_versions %}
+        <h3 class="mb-3">Другие версии</h3>
+        <div class="list-group">
+            {% for version in other_versions %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">Версия {{ version.pkg_version }}</h5>
+                            <p class="mb-1">{{ version.pkg_description|truncatechars:200 }}</p>
+                            <small class="text-muted">Опубликован: {{ version.pkg_publish_date }}</small>
+                            
+                            {% if version.admin_comment and version.verification_status == 'rejected' %}
+                                <div class="alert alert-danger mt-2 mb-0">
+                                    <strong>Комментарий администратора:</strong><br>
+                                    {{ version.admin_comment }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex flex-column align-items-end">
+                            {% if is_staff %}
+                                <span class="badge {% if version.verification_status == 'verified' %}bg-success{% elif version.verification_status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %} mb-2">
+                                    {{ version.get_verification_status_display }}
+                                </span>
+                            {% endif %}
+                            
+                            {% if is_staff or version.verification_status == 'verified' %}
+                                <a href="{% url 'download-package' version.pkg_name version.pkg_version %}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-download"></i> Скачать
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+{% if is_staff and package.verification_status == 'pending' %}
+    <!-- Модальное окно для отклонения пакета -->
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Отклонить пакет {{ package.pkg_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" action="{% url 'verify-package' package.pkg_name package.pkg_version %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <input type="hidden" name="status" value="rejected">
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Причина отклонения:</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-danger">Отклонить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %} 
